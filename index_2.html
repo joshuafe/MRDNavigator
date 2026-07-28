@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MRD Navigator — WCM BMT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFEAE1; --card:#FFFDFA; --fill:#F4EFE6;
+    --ink:#221E2A; --ink2:#544E5E; --grey:#8A8492; --grey2:#B7B1BE;
+    --line:#E7E0D6; --line2:#DBD3C7;
+    --accent:#8E2A44; --accent-d:#6E2036; --accent-soft:#F5E4E8;
+    --blue:#4B4E8C; --red:#B23A48; --amber:#C17E2E; --green:#2E7D5B; --violet:#5A4E9E; --teal:#1E7A82;
+    --shadow:0 1px 1px rgba(34,24,40,.03),0 5px 16px rgba(34,24,40,.06),0 2px 5px rgba(34,24,40,.04);
+    --shadow-lift:0 2px 5px rgba(34,24,40,.06),0 14px 34px rgba(34,24,40,.16);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:var(--sans);
+    background:
+      radial-gradient(1100px 620px at 12% -12%, rgba(142,42,68,.34), transparent 58%),
+      radial-gradient(1000px 760px at 116% 16%, rgba(30,122,130,.24), transparent 56%),
+      radial-gradient(820px 680px at 50% 122%, rgba(90,78,158,.20), transparent 60%),
+      #16131C;
+    color:var(--ink); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    display:flex; align-items:center; justify-content:center; min-height:100vh; padding:26px;
+  }
+  /* Phone frame */
+  .phone{
+    width:100%; max-width:412px; height:min(884px,94vh);
+    background:var(--paper); position:relative; overflow:hidden;
+    border-radius:48px;
+    box-shadow:0 50px 110px -22px rgba(0,0,0,.62), 0 0 0 2px rgba(255,255,255,.05), 0 0 0 10px #0c0a11, 0 0 0 11px #322c3b;
+    display:flex; flex-direction:column;
+  }
+  @media (max-width:480px){
+    body{background:var(--paper);padding:0}
+    .phone{max-width:none;height:100vh;border-radius:0;box-shadow:none}
+  }
+  /* status bar */
+  .status{height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-size:14px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .status .dots{display:flex;gap:5px;align-items:center}
+  .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:118px;height:26px;background:#0c0a11;border-radius:16px;z-index:5}
+  @media (max-width:480px){.notch{display:none}}
+
+  /* nav bar */
+  .nav{flex:0 0 auto;padding:2px 15px 8px;display:flex;align-items:center;gap:8px;min-height:38px}
+  .nav .back{font-size:16px;color:var(--accent);background:none;border:none;display:flex;align-items:center;gap:3px;font-weight:600;padding:6px 4px;cursor:pointer;transition:opacity .15s}
+  .nav .back:active{opacity:.5}
+  .nav .back[hidden]{display:none}
+  .nav .back svg{width:11px;height:18px}
+  .nav .title{font-family:var(--serif);font-size:19px;font-weight:600;flex:1;text-align:center;letter-spacing:.1px;color:var(--ink)}
+  .nav .restart{font-size:14px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:6px 4px}
+  .nav .spacer{width:54px}
+
+  /* breadcrumb chips */
+  .crumbs{flex:0 0 auto;display:flex;gap:6px;padding:0 15px 8px;overflow-x:auto;scrollbar-width:none}
+  .crumbs[hidden]{display:none}
+  .crumbs::-webkit-scrollbar{display:none}
+  .crumb{flex:0 0 auto;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;background:rgba(255,255,255,.7);color:var(--ink2);border:1px solid var(--line);white-space:nowrap;letter-spacing:.1px}
+  .crumb b{color:var(--accent);font-weight:700}
+
+  /* scroll area */
+  .scroll{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 16px 26px}
+  .scroll::-webkit-scrollbar{width:0}
+
+  /* progress dots */
+  .prog{display:flex;gap:6px;justify-content:center;padding:2px 0 18px}
+  .prog i{width:6px;height:6px;border-radius:50%;background:var(--line2);transition:all .28s cubic-bezier(.4,0,.2,1)}
+  .prog i.on{background:var(--accent);width:22px;border-radius:4px}
+  .prog i.done{background:var(--accent);opacity:.5}
+
+  /* question */
+  .q{font-family:var(--serif);font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-.2px;margin:6px 1px 6px;color:var(--ink)}
+  .qsub{font-size:14.5px;color:var(--ink2);margin:0 1px 20px;line-height:1.4}
+
+  /* option buttons */
+  .opts{display:flex;flex-direction:column;gap:11px}
+  .opt{
+    display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+    background:var(--card);border:1.5px solid rgba(34,24,40,.05);border-radius:18px;
+    padding:16px 15px;cursor:pointer;box-shadow:var(--shadow);
+    transition:transform .1s ease, border-color .15s, box-shadow .15s;
+  }
+  .opt:active{transform:scale(.984)}
+  .opt .ic{flex:0 0 44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#fff;font-family:var(--serif);box-shadow:inset 0 -2px 6px rgba(0,0,0,.14),0 3px 8px rgba(34,24,40,.14);letter-spacing:-.5px}
+  .opt .tx{flex:1;min-width:0}
+  .opt .tx .l{display:block;font-size:17.5px;font-weight:700;letter-spacing:-.2px;line-height:1.2;color:var(--ink)}
+  .opt .tx .s{display:block;font-size:12.5px;color:var(--grey);margin-top:3px;line-height:1.3;font-weight:500}
+  .opt .chev{color:var(--grey2);flex:0 0 auto}
+  .opt .chev svg{width:8px;height:15px}
+  .opt.sel{border-color:var(--accent);background:linear-gradient(var(--accent-soft),var(--card));box-shadow:var(--shadow-lift),0 0 0 3px rgba(142,42,68,.1)}
+
+  /* plan screen */
+  .planhead{padding:6px 1px 2px}
+  .planhead .big{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.2px;line-height:1.05;color:var(--ink)}
+  .planhead .sub{font-size:13.5px;color:var(--ink2);margin-top:7px;line-height:1.45;font-weight:500}
+
+  .sectlabel{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--grey);margin:24px 3px 10px;display:flex;align-items:center;gap:8px}
+  .sectlabel .n{background:var(--accent);color:#fff;border-radius:6px;font-size:10px;padding:2px 7px;letter-spacing:.5px;font-weight:700}
+
+  /* flags */
+  .flags{display:flex;flex-direction:column;gap:9px}
+  .flag{display:flex;gap:12px;align-items:flex-start;background:var(--card);border-radius:15px;padding:13px 15px 13px 13px;box-shadow:var(--shadow);border-left:3px solid var(--amber)}
+  .flag.red{border-left-color:var(--red)} .flag.blue{border-left-color:var(--blue)} .flag.green{border-left-color:var(--green)}
+  .flag .fic{font-size:16px;flex:0 0 auto;line-height:1.3;opacity:.85}
+  .flag .ft{font-size:13.5px;line-height:1.4;color:var(--ink2)}
+  .flag .ft b{color:var(--ink);font-weight:700}
+
+  /* test cards */
+  .tcard{background:var(--card);border-radius:18px;padding:15px;margin-bottom:10px;box-shadow:var(--shadow);border:1px solid rgba(34,24,40,.04)}
+  .tcard .thead{display:flex;align-items:flex-start;gap:12px}
+  .tcard .num{flex:0 0 28px;height:28px;border-radius:9px;background:linear-gradient(155deg,var(--accent),var(--accent-d));color:#fff;font-size:14px;font-weight:700;font-family:var(--serif);display:flex;align-items:center;justify-content:center;margin-top:1px;box-shadow:0 2px 6px rgba(142,42,68,.28)}
+  .tcard .tname{flex:1;min-width:0}
+  .tcard .tname .nm{display:block;font-size:16.5px;font-weight:700;letter-spacing:-.2px;line-height:1.22;color:var(--ink)}
+  .tcard .tname .wy{display:block;font-size:13px;color:var(--ink2);margin-top:5px;line-height:1.4}
+  .badge{flex:0 0 auto;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.4px;padding:4px 8px;border-radius:7px;text-transform:uppercase;white-space:nowrap;margin-top:2px}
+  .badge.inh{background:#E4F0E9;color:#2E7D5B} .badge.out{background:#F6E9D8;color:#A9701F}
+  .badge.arup{background:#F5E1E4;color:#9C2B36} .badge.soon{background:#E9E6F3;color:#5A4E9E}
+  .badge.res{background:#DDEDED;color:#1E7A82}
+  .meta{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12px}
+  .meta .k{color:var(--grey);font-weight:600;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;padding-top:1px} .meta .v{color:var(--ink2);font-weight:500}
+  .meta .v.mono{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+  .src{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:6px;letter-spacing:.2px}
+  .src.bm{background:#F5E3EA;color:#9C2B54} .src.pb{background:#E6E9F5;color:#3F4488} .src.both{background:#EDEAE2;color:#6A6472}
+
+  /* section-label hint */
+  .sectlabel .hint{margin-left:auto;font-family:var(--sans);font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--grey2)}
+
+  /* compact order-of-draw group label */
+  .grouplabel{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--grey);margin:15px 3px 7px;display:flex;align-items:center;gap:8px}
+  .grouplabel::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  /* compact test row (tap to expand) */
+  .trow{background:var(--card);border:1px solid rgba(34,24,40,.05);border-radius:13px;margin-bottom:7px;box-shadow:var(--shadow);overflow:hidden}
+  .trow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:12px 13px}
+  .trow>summary::-webkit-details-marker{display:none}
+  .trow[open]{box-shadow:var(--shadow-lift)}
+  .trow[open]>summary{border-bottom:1px solid var(--line)}
+  .tnum{flex:0 0 23px;height:23px;border-radius:7px;background:linear-gradient(155deg,var(--accent),var(--accent-d));color:#fff;font-family:var(--serif);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(142,42,68,.25)}
+  .tnum.note{background:var(--grey2);box-shadow:none}
+  .tnm{flex:1;min-width:0;font-size:15px;font-weight:650;color:var(--ink);letter-spacing:-.1px;line-height:1.25}
+  .trow .tchev{flex:0 0 auto;color:var(--grey2);font-size:17px;line-height:1;transition:transform .22s}
+  .trow[open] .tchev{transform:rotate(90deg)}
+  .tbody{padding:12px 14px 14px 47px}
+  .twhy{font-size:13px;color:var(--ink2);line-height:1.42}
+
+  /* compact must-do row */
+  .mustdo{display:flex;flex-direction:column;gap:6px}
+  .frow{background:var(--card);border:1px solid rgba(34,24,40,.05);border-left:3px solid var(--amber);border-radius:11px;box-shadow:var(--shadow);overflow:hidden}
+  .frow.red{border-left-color:var(--red)} .frow.blue{border-left-color:var(--blue)} .frow.green{border-left-color:var(--green)}
+  .frow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 12px}
+  .frow>summary::-webkit-details-marker{display:none}
+  .frow.solo{display:flex;align-items:center;gap:10px;padding:11px 12px}
+  .frow .fic{flex:0 0 18px;font-size:14px;opacity:.85;text-align:center}
+  .frow .fhead{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3}
+  .frow .fchev{flex:0 0 auto;color:var(--grey2);font-size:15px;transition:transform .22s}
+  .frow[open] .fchev{transform:rotate(90deg)}
+  .frow .fdetail{padding:0 12px 11px 40px;font-size:12.5px;color:var(--ink2);line-height:1.44}
+  .frow .fdetail b{color:var(--ink);font-weight:700}
+
+  /* collapsible */
+  .acc{background:var(--card);border-radius:18px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;border:1px solid rgba(34,24,40,.04)}
+  .acc>summary{list-style:none;cursor:pointer;padding:16px 16px;display:flex;align-items:center;gap:11px;font-size:16px;font-weight:700;color:var(--ink)}
+  .acc>summary::-webkit-details-marker{display:none}
+  .acc>summary .aic{font-size:17px;opacity:.9}
+  .acc>summary .arw{margin-left:auto;color:var(--grey2);transition:transform .25s;font-size:18px}
+  .acc[open]>summary .arw{transform:rotate(90deg)}
+  .acc[open]>summary{border-bottom:1px solid var(--line)}
+  .acc .body{padding:14px 16px 18px}
+
+  /* interpretation table */
+  .itbl{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:12.5px}
+  .itbl th{text-align:left;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line2)}
+  .itbl td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.35;color:var(--ink2)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+  .pill.g{background:#E4F0E9;color:#2E7D5B} .pill.a{background:#F7ECD9;color:#A9701F} .pill.r{background:#F6E0E2;color:#B23A48}
+  .srcband{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink);margin:14px 0 3px;display:flex;align-items:center;gap:8px}
+  .fn{font-size:11.5px;color:var(--grey);line-height:1.45;margin-top:9px}
+  .fn b{color:var(--ink2)}
+
+  /* action pathway */
+  .act{display:flex;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}
+  .act:last-child{border-bottom:none}
+  .act .dot{flex:0 0 11px;height:11px;border-radius:50%;margin-top:5px;box-shadow:0 0 0 4px rgba(0,0,0,.03)}
+  .act .atx .an{font-size:15px;font-weight:700;color:var(--ink)} .act .atx .ad{font-size:13px;color:var(--ink2);margin-top:3px;line-height:1.4}
+
+  /* reference */
+  .refsect{margin-bottom:8px}
+  .refh{font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.2px;margin:18px 2px 5px;color:var(--ink)}
+  .refp{font-size:13px;color:var(--ink2);margin:0 2px 12px;line-height:1.45}
+  .rtable{width:100%;border-collapse:collapse;background:var(--card);border-radius:15px;overflow:hidden;box-shadow:var(--shadow);font-size:12.5px;margin-bottom:8px;border:1px solid rgba(34,24,40,.04)}
+  .rtable th{background:var(--fill);text-align:left;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:600;padding:9px 11px}
+  .rtable td{padding:10px 11px;border-top:1px solid var(--line);vertical-align:top;line-height:1.35;color:var(--ink2)}
+  .rtable td .tn{font-weight:700;color:var(--ink)}
+
+  /* bottom tab bar */
+  .tabbar{flex:0 0 auto;display:flex;background:rgba(247,243,236,.82);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line);padding:8px 0 max(11px,env(safe-area-inset-bottom))}
+  .tab{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--grey);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.2px;padding:2px 0}
+  .tab svg{width:24px;height:24px}
+  .tab.on{color:var(--accent)}
+
+  .startcard{position:relative;overflow:hidden;background:linear-gradient(150deg,#A0304C 0%,#7A2540 55%,#4E2138 100%);border-radius:24px;padding:24px 22px;color:#fff;box-shadow:0 16px 40px -8px rgba(120,30,55,.5);margin:2px 1px 22px}
+  .startcard::after{content:"";position:absolute;inset:0;background:radial-gradient(120px 90px at 88% 12%,rgba(255,255,255,.22),transparent 70%);pointer-events:none}
+  .startcard h1{font-family:var(--serif);font-size:27px;font-weight:600;margin:0 0 8px;letter-spacing:0;line-height:1.05}
+  .startcard p{font-size:14px;margin:0;opacity:.94;line-height:1.45;font-weight:500}
+  .disclaimer{font-size:11.5px;color:var(--grey);line-height:1.5;margin:20px 3px 8px;padding:13px 15px;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:14px}
+  .disclaimer b{color:var(--ink2)}
+
+  .fade{animation:fade .34s cubic-bezier(.2,.7,.2,1)}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status">
+    <span id="clock">9:41</span>
+    <span class="dots">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 2.4c2 0 3.9.8 5.3 2.1l1.2-1.3A9.4 9.4 0 0 0 8.5.5 9.4 9.4 0 0 0 2 3.2l1.2 1.3A7.4 7.4 0 0 1 8.5 2.4Z"/><path d="M8.5 6c1 0 2 .4 2.7 1.1l1.2-1.3A6 6 0 0 0 8.5 4a6 6 0 0 0-3.9 1.8l1.2 1.3A4 4 0 0 1 8.5 6Z"/><circle cx="8.5" cy="9.6" r="1.6"/></svg>
+      <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="1" y="1" width="21" height="10" rx="3" stroke="currentColor" stroke-opacity=".4"/><rect x="2.5" y="2.5" width="16" height="7" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="1.6" height="4" rx=".8" fill="currentColor" fill-opacity=".4"/></svg>
+    </span>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <button class="back" id="backBtn" hidden onclick="goBack()"><svg viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+    <div class="title" id="navTitle">MRD Navigator</div>
+    <button class="restart" id="restartBtn" hidden onclick="restart()">Restart</button>
+    <div class="spacer" id="navSpacer"></div>
+  </div>
+
+  <div class="crumbs" id="crumbs" hidden></div>
+
+  <!-- MAIN SCROLL -->
+  <div class="scroll" id="scroll"></div>
+
+  <!-- TABS -->
+  <div class="tabbar">
+    <button class="tab on" id="tabDecide" onclick="setTab('decide')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0H5a2 2 0 0 1-2-2v-4m6 6h10a2 2 0 0 0 2-2v-4M3 9h18M3 15h18" stroke-linecap="round"/></svg>
+      Decide
+    </button>
+    <button class="tab" id="tabRef" onclick="setTab('ref')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" stroke-linejoin="round"/><path d="M14 3v6h6M8 13h8M8 17h6" stroke-linecap="round"/></svg>
+      Reference
+    </button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   MRD NAVIGATOR — Weill Cornell BMT
+   Bedside decision tool encoding BMT_MRD_SOP_v3 (7.22.26)
+   Every rule below is drawn from that SOP. No added clinical judgment.
+   ============================================================ */
+
+/* ---------- TEST DEFINITIONS (specimen / tube / EMR order / volume / sensitivity) ---------- */
+const T = {
+  morph:   {nm:'Morphology + biopsy', badge:'inh', src:'bm',  emr:'Heme comprehensive', tube:'—', vol:'—', sens:'', wy:'Aspirate + core review — every marrow.'},
+  flow:    {nm:'Flow cytometry (MFC)', badge:'inh', src:'bm', emr:'Heme comprehensive · or Flow cytometry only', tube:'Sodium heparin', vol:'BM 1 tube', sens:'', wy:'Immunophenotyping / MFC MRD. Needs fresh viable cells.'},
+  cyto:    {nm:'Cytogenetics + FISH', badge:'inh', src:'bm', emr:'Heme comprehensive · or Cancer cytogenetics', tube:'Sodium heparin', vol:'BM 1 tube', sens:'', wy:'Karyotype + disease FISH panel.'},
+  chim_w:  {nm:'Chimerism — whole (unsorted)', badge:'inh', src:'both', emr:'Chimerism', tube:'EDTA', vol:'—', sens:'', wy:'Donor/recipient — marrow or PB.'},
+  chim_l:  {nm:'Chimerism — CD3 + CD33 (lineage)', badge:'inh', src:'pb', emr:'Chimerism lineage', tube:'EDTA', vol:'—', sens:'', wy:'Lineage-sorted, from peripheral blood.'},
+
+  npm1_pcr:{nm:'NPM1 Type A — RT-PCR', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'0.01% NCN (Type A only)', wy:'Quantitative, trend-based AML MRD. BM or PB (send from marrow if a marrow is being done).'},
+  npm1_ngs:{nm:'NPM1 UHS-NGS (Invivoscribe)', badge:'out', src:'bm', emr:'Sendout — NPM1 MRD Assay', tube:'EDTA', vol:'PB 1–3 mL · BM 0.25–1 mL', sens:'', wy:'LeukoStrat NGS — covers Type A AND non–Type-A (exon 12).'},
+  flt3_pcr:{nm:'FLT3 ITD/TKD Rapid PCR', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'ITD 1% · TKD 3% VAF — diagnostic-grade', wy:'Diagnostic-grade only — NOT an MRD test.'},
+  flt3_ngs:{nm:'FLT3-ITD UHS-NGS (Invivoscribe)', badge:'out', src:'bm', emr:'Sendout — FLT3 ITD MRD Assay', tube:'EDTA', vol:'PB 1–3 mL · BM 0.25–1 mL', sens:'LOD 10⁻⁴–10⁻⁵ VAF', wy:'MRD-grade, ITD only. Marrow required (PB less sensitive). Binary read.'},
+  idh:     {nm:'IDH1 / IDH2 ddPCR', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'0.1% fractional abundance', wy:'IDH1/2 mutant allele burden.'},
+  cbfb:    {nm:'CBFB::MYH11 RT-PCR', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'0.004% NCN', wy:'inv(16) CBF-AML transcript. Baseline required at dx to enable monitoring.'},
+  runx1:   {nm:'RUNX1::RUNX1T1 RT-PCR', badge:'arup', src:'bm', emr:'Sendout — ARUP', tube:'EDTA', vol:'', sens:'', wy:'t(8;21) CBF-AML transcript. Send-out to ARUP (in-house validated, NYS pending).'},
+  pml:     {nm:'PML-RARA PCR', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'1/10³–1/10⁴ (qualitative)', wy:'APL t(15;17) transcript.'},
+  bcrabl:  {nm:'BCR-ABL1 PCR (p210 / p190)', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'e13a2/e14a2 to 0.001–0.0001% IS', wy:'Ph+ disease. Quantitative on the international scale.'},
+  jak2:    {nm:'JAK2 V617F ddPCR', badge:'inh', src:'bm', emr:'Heme comprehensive · or Heme molecular only', tube:'EDTA · 2 tubes', vol:'', sens:'0.1% fractional abundance', wy:'JAK2 V617F allele burden (in-house).'},
+  calrmpl: {nm:'CALR / MPL driver (NeoGenomics)', badge:'out', src:'bm', emr:'Sendout — NeoGenomics', tube:'EDTA', vol:'', sens:'', wy:"Patient-specific driver when not JAK2 V617F."},
+  cseq_id: {nm:'ClonoSEQ ID (Adaptive)', badge:'out', src:'bm', emr:'Adaptive Clonoseq ID', tube:'EDTA', vol:'PB >2 mL · BM >200 µL', sens:'', wy:'Establishes the trackable IGH/IGK/TCR clone. Required once, at dx/relapse.'},
+  cseq_mrd:{nm:'ClonoSEQ MRD (Adaptive)', badge:'out', src:'bm', emr:'Adaptive Clonoseq MRD', tube:'EDTA', vol:'PB >2 mL · BM ≥1 mL', sens:'~10⁻⁶', wy:'Lymphoid MRD. Needs a baseline clone.'},
+  neocomp: {nm:'NeoComp myeloid NGS (NeoGenomics)', badge:'out', src:'bm', emr:'Sendout — CPT 81455 Neo Comprehensive / Myeloid', tube:'EDTA', vol:'PB 3–5 mL · BM 2–3 mL', sens:'', wy:'Tracks mutations with no dedicated MRD assay. In-house broad alt = TSO500.'},
+  rna:     {nm:'RNA fusion panel (Archer)', badge:'soon', src:'bm', emr:'Heme comprehensive · or Sendout', tube:'EDTA', vol:'', sens:'~0.5% fusion reads', wy:'Rare fusions not PCR-trackable (e.g., KMT2A, Ph-like ABL1/ABL2).'},
+  biobank: {nm:'Biobank — research sample', badge:'res', src:'bm', emr:'', tube:'5 mL in 0.5 mL heparin syringe', vol:'', sens:'', wy:'Research biobank pull, drawn last (if eligible). Eligibility questions → Joshua Fein or Edgar Rey.'}
+};
+
+/* ---------- DISEASE META ---------- */
+const DIS = {
+  aml:{label:'AML / MDS', color:'#B23A48', ic:'A', sub:'Acute myeloid leukemia / MDS'},
+  all:{label:'ALL',       color:'#5A4E9E', ic:'L', sub:'Acute lymphoblastic leukemia (B & T)'},
+  cml:{label:'CML',       color:'#C17E2E', ic:'C', sub:'Chronic myeloid leukemia'},
+  mpn:{label:'MF / MPN',  color:'#1E7A82', ic:'M', sub:'Myelofibrosis / MPN'}
+};
+const SETTING = {
+  newdx:  {label:'New diagnosis', ic:'✚', color:'#B23A48', sub:'First presentation — full workup', burden:'high'},
+  relapse:{label:'Suspected relapse', ic:'⚠', color:'#C17E2E', sub:'e.g. falling chimerism, new cytopenias', burden:'high'},
+  followup:{label:'Follow-up / response', ic:'◑', color:'#5A4E9E', sub:'Pre-HCT, first CR, response assessment', burden:'low'},
+  posthct:{label:'Post-transplant surveillance', ic:'★', color:'#2E7D5B', sub:'Routine monitoring after HCT', burden:'low'}
+};
+
+/* ============================================================
+   QUESTION ENGINE — builds the minimum question queue
+   ============================================================ */
+function buildQueue(s){
+  const q = ['disease','setting'];
+  if(!s.disease || !s.setting) return q;
+
+  if(s.setting==='followup') q.push('fu_stage');
+  if(s.setting==='posthct')  q.push('ph_day');
+
+  // marker questions only when the answer changes the MRD plan (low-burden timepoints)
+  const lowBurden = (s.setting==='followup' || s.setting==='posthct');
+  if(lowBurden){
+    if(s.disease==='aml'){ q.push('npm1','flt3','cbf','othermut','fusion'); }
+    if(s.disease==='all'){ q.push('lineage','clone','ph','all_fusion'); }
+    if(s.disease==='mpn'){ q.push('driver'); }
+    // cml: BCR-ABL is the marker — no extra questions
+  }
+  q.push('biobank');   // research biobank pull offered on every marrow (if eligible)
+  return q;
+}
+
+/* option sets for each question */
+function questionDef(id, s){
+  switch(id){
+    case 'disease': return {q:'Which disease?', sub:'', opts:[
+      {v:'aml',l:'AML / MDS',s:DIS.aml.sub,ic:'A',c:DIS.aml.color},
+      {v:'all',l:'ALL',s:DIS.all.sub,ic:'L',c:DIS.all.color},
+      {v:'cml',l:'CML',s:DIS.cml.sub,ic:'C',c:DIS.cml.color},
+      {v:'mpn',l:'MF / MPN',s:DIS.mpn.sub,ic:'M',c:DIS.mpn.color}
+    ]};
+    case 'setting': return {q:"What's the setting?", sub:'Determines order of draw and which panel to send.', opts:[
+      {v:'newdx',l:'New diagnosis',s:SETTING.newdx.sub,ic:'✚',c:SETTING.newdx.color},
+      {v:'relapse',l:'Suspected relapse',s:SETTING.relapse.sub,ic:'⚠',c:SETTING.relapse.color},
+      {v:'followup',l:'Follow-up / response',s:SETTING.followup.sub,ic:'◑',c:SETTING.followup.color},
+      {v:'posthct',l:'Post-transplant surveillance',s:SETTING.posthct.sub,ic:'★',c:SETTING.posthct.color}
+    ]};
+    case 'fu_stage': return {q:'Which follow-up marrow?', sub:'', opts:[
+      {v:'firstcr',l:'First CR (post-induction)',s:'NeoComp NGS required',ic:'①',c:'#5A4E9E'},
+      {v:'prehct',l:'Pre-transplant workup',s:'NPM1: send BOTH assays',ic:'⇲',c:'#4B4E8C'},
+      {v:'other',l:'Other response assessment',s:'',ic:'◔',c:'#8A8492'}
+    ]};
+    case 'ph_day': return {q:'Which post-transplant timepoint?', sub:'BM at +30, +100, +180, +360; PB in between.', opts:[
+      {v:'d30',l:'Day +30',s:'NPM1 both assays · NeoComp if mutation at dx',ic:'30',c:'#2E7D5B'},
+      {v:'d100',l:'Day +100',s:'',ic:'100',c:'#2E7D5B'},
+      {v:'d180',l:'Day +180',s:'',ic:'180',c:'#2E7D5B'},
+      {v:'d360',l:'Day +360',s:'',ic:'360',c:'#2E7D5B'},
+      {v:'interim',l:'Interim monitoring (PB)',s:'Between marrows — e.g. NPM1/FLT3 q4–6 wk',ic:'~',c:'#1E7A82'}
+    ]};
+    // ---- AML markers ----
+    case 'npm1': return {q:'NPM1 mutation?', sub:'Type A drives in-house PCR; non–Type-A needs NGS.', opts:[
+      {v:'none',l:'None',s:'',ic:'–',c:'#8A8492'},
+      {v:'typea',l:'Type A',s:'In-house RT-PCR (0.01% NCN)',ic:'A',c:'#B23A48'},
+      {v:'nona',l:'Non–Type-A',s:'Invivoscribe NGS (covers all exon 12)',ic:'B',c:'#C17E2E'}
+    ]};
+    case 'flt3': return {q:'FLT3 mutation?', sub:'ITD has an MRD-grade send-out; TKD does not.', opts:[
+      {v:'none',l:'None',s:'',ic:'–',c:'#8A8492'},
+      {v:'itd',l:'FLT3-ITD',s:'UHS-NGS MRD, from marrow',ic:'I',c:'#B23A48'},
+      {v:'tkd',l:'FLT3-TKD only',s:'No MRD assay — diagnostic PCR only',ic:'T',c:'#C17E2E'},
+      {v:'both',l:'ITD + TKD',s:'',ic:'±',c:'#B23A48'}
+    ]};
+    case 'cbf': return {q:'Core-binding-factor lesion?', sub:'Baseline CBF PCR enables later MRD monitoring.', opts:[
+      {v:'none',l:'None',s:'',ic:'–',c:'#8A8492'},
+      {v:'inv16',l:'inv(16)',s:'CBFB::MYH11 — in-house',ic:'16',c:'#5A4E9E'},
+      {v:'t821',l:'t(8;21)',s:'RUNX1::RUNX1T1 — ARUP send-out',ic:'21',c:'#9C2B36'}
+    ]};
+    case 'othermut': return {q:'Other diagnostic mutation with no dedicated MRD assay?', sub:'e.g. ASXL1, KMT2A, TP53 — tracked by NeoComp NGS.', opts:[
+      {v:'yes',l:'Yes',s:'Track by NeoComp',ic:'✓',c:'#5A4E9E'},
+      {v:'no',l:'No',s:'',ic:'–',c:'#8A8492'}
+    ]};
+    case 'fusion': return {q:'Non-PCR-trackable fusion?', sub:'e.g. KMT2A rearrangement, Ph-like ABL1/ABL2.', opts:[
+      {v:'yes',l:'Yes',s:'Add RNA fusion panel (Archer)',ic:'✓',c:'#1E7A82'},
+      {v:'no',l:'No',s:'',ic:'–',c:'#8A8492'}
+    ]};
+    // ---- ALL markers ----
+    case 'lineage': return {q:'ALL lineage?', sub:'B-ALL changes the chimerism strategy.', opts:[
+      {v:'b',l:'B-ALL',s:'Send sorted + unsorted chimerism',ic:'B',c:'#5A4E9E'},
+      {v:'t',l:'T-ALL',s:'',ic:'T',c:'#5A4E9E'}
+    ]};
+    case 'clone': return {q:'ClonoSEQ clone established at baseline?', sub:'A trackable clone is required for ClonoSEQ MRD.', opts:[
+      {v:'yes',l:'Yes — clone on file',s:'Order ClonoSEQ MRD',ic:'✓',c:'#2E7D5B'},
+      {v:'no',l:'No / unknown',s:'Send ClonoSEQ ID first',ic:'!',c:'#B23A48'}
+    ]};
+    case 'ph': return {q:'Ph+ (BCR-ABL)?', sub:'', opts:[
+      {v:'no',l:'No',s:'',ic:'–',c:'#8A8492'},
+      {v:'p210',l:'Yes — p210',s:'e13a2 / e14a2',ic:'210',c:'#C17E2E'},
+      {v:'p190',l:'Yes — p190',s:'e1a2',ic:'190',c:'#C17E2E'},
+      {v:'yes',l:'Yes — transcript unknown',s:'',ic:'+',c:'#C17E2E'}
+    ]};
+    case 'all_fusion': return {q:'Rare fusion positive at diagnosis?', sub:'Non-PCR-trackable (Archer RNA fusion).', opts:[
+      {v:'yes',l:'Yes',s:'Track by RNA fusion',ic:'✓',c:'#1E7A82'},
+      {v:'no',l:'No',s:'',ic:'–',c:'#8A8492'}
+    ]};
+    // ---- MPN markers ----
+    case 'driver': return {q:'MPN driver mutation?', sub:'JAK2 V617F is in-house ddPCR; others via NeoGenomics.', opts:[
+      {v:'jak2',l:'JAK2 V617F',s:'In-house ddPCR (0.1%)',ic:'J',c:'#1E7A82'},
+      {v:'calr',l:'CALR',s:'NeoGenomics driver marker',ic:'C',c:'#1E7A82'},
+      {v:'mpl',l:'MPL',s:'NeoGenomics driver marker',ic:'M',c:'#1E7A82'},
+      {v:'tn',l:'Triple-negative / other',s:'Full NGS',ic:'∅',c:'#8A8492'}
+    ]};
+    // ---- Biobank (every marrow) ----
+    case 'biobank': return {q:'Biobank — patient eligible?', sub:'Research draw: 5 mL in a 0.5 mL heparin syringe, taken last. Questions → Joshua Fein or Edgar Rey.', opts:[
+      {v:'yes',l:'Yes — eligible',s:'Include the biobank pull',ic:'✓',c:'#1E7A82'},
+      {v:'unsure',l:'Unsure',s:'Include + confirm with Joshua / Edgar',ic:'?',c:'#C17E2E'},
+      {v:'no',l:'No / not eligible',s:'Do not draw',ic:'–',c:'#8A8492'}
+    ]};
+  }
+  return {q:id, opts:[]};
+}
+
+/* ============================================================
+   PLAN ASSEMBLY — turns answers into the ordered draw plan
+   ============================================================ */
+function assemblePlan(s){
+  const high = SETTING[s.setting].burden==='high';
+  const posthct = s.setting==='posthct';
+  const prehct = (s.setting==='followup' && s.fu_stage==='prehct');
+  const firstcr = (s.setting==='followup' && s.fu_stage==='firstcr');
+  const d30 = (s.setting==='posthct' && s.ph_day==='d30');
+  const interim = (s.setting==='posthct' && s.ph_day==='interim');
+  const npmBoth = prehct || d30;              // send BOTH NPM1 assays
+  const mrd = []; const additional = []; const flags = []; const interp = new Set();
+
+  const add=(bucket,key,whyOverride,srcOverride)=>{
+    const t=Object.assign({},T[key]);
+    if(whyOverride) t.wy=whyOverride;
+    if(srcOverride) t.src=srcOverride;
+    t.key=key; bucket.push(t);
+  };
+
+  /* ---------- HIGH BURDEN: new diagnosis / suspected relapse ---------- */
+  if(high){
+    if(s.setting==='relapse')
+      flags.push({c:'red',i:'⚠',t:'<b>Suspected relapse — treat as new diagnosis.</b> Send the full diagnostic panel for this disease, not surveillance MRD alone.'});
+    flags.push({c:'blue',i:'✎',t:'<b>Verify out loud before the draw.</b> Attending + APP confirm what is being sent and the order of draw.'});
+    flags.push({c:'blue',i:'①',t:"<b>Order of draw won't change detection.</b> High disease burden — prioritise fresh-viable-cell tests: flow → cytogenetics → molecular."});
+
+    // discovery panel by disease
+    if(s.disease==='aml'){
+      add(additional,'rna','RNA fusion (Archer) — captures rare/PCR-untrackable fusions.');
+      add(additional,'neocomp','Discovery myeloid NGS — establishes trackable mutations.');
+      add(additional,'flt3_pcr'); add(additional,'idh');
+      add(additional,'npm1_pcr','NPM1 baseline (in-house PCR).');
+      add(additional,'pml','If APL suspected — PML-RARA.');
+      flags.push({c:'amber',i:'▣',t:'<b>Baseline CBF PCR if cytogenetics show it:</b> CBFB::MYH11 (in-house) for inv(16); RUNX1::RUNX1T1 (ARUP) for t(8;21). Captures the marker for later MRD.'});
+    }
+    if(s.disease==='all'){
+      add(mrd,'cseq_id','ClonoSEQ ID — MANDATORY at diagnosis (B- and T-ALL, incl. Ph+). Establishes the trackable clone.');
+      add(additional,'rna'); add(additional,'neocomp'); add(additional,'flt3_pcr'); add(additional,'idh');
+      flags.push({c:'red',i:'✚',t:'<b>ClonoSEQ ID is required on every ALL diagnosis</b> — without a baseline clone you cannot run sensitive MRD later.'});
+      flags.push({c:'amber',i:'＋',t:'<b>If Ph+</b>, add BCR-ABL p210/p190 PCR at baseline.'});
+    }
+    if(s.disease==='cml'){
+      add(mrd,'bcrabl','BCR-ABL PCR — baseline on the international scale.');
+      add(additional,'neocomp','If indicated.');
+    }
+    if(s.disease==='mpn'){
+      add(mrd,'jak2','JAK2 V617F — with reflex to CALR & MPL (NeoGenomics) or full NGS.');
+      add(additional,'bcrabl','Also send BCR-ABL PCR to exclude CML.');
+      add(additional,'neocomp');
+    }
+  }
+
+  /* ---------- LOW BURDEN: follow-up / post-HCT ---------- */
+  else {
+    flags.push({c:'blue',i:'✎',t:'<b>Verify out loud before the draw.</b> Attending + APP confirm what is being sent and the order of draw.'});
+    flags.push({c:'red',i:'①',t:'<b>First pull is precious.</b> Least hemodiluted — give it to the most sensitive molecular MRD assay. Each later pull loses MRD sensitivity.'});
+
+    if(s.disease==='aml'){
+      // NPM1
+      if(s.npm1==='typea'){ add(mrd,'npm1_pcr'); interp.add('npm1');
+        if(npmBoth){ add(mrd,'npm1_ngs','Send WITH in-house PCR at this timepoint.'); flags.push({c:'amber',i:'⇄',t:'<b>NPM1: send BOTH assays</b> (Invivoscribe NGS + in-house PCR) — required '+(prehct?'pre-transplant':'at Day +30')+'.'}); }
+      } else if(s.npm1==='nona'){ add(mrd,'npm1_ngs','Non–Type-A: Invivoscribe NGS is the tracking assay.'); interp.add('npm1'); }
+      // FLT3
+      if(s.flt3==='itd'||s.flt3==='both'){ add(mrd,'flt3_ngs'); interp.add('flt3');
+        flags.push({c:'red',i:'⛏',t:'<b>FLT3-ITD MRD must be drawn from marrow</b> — peripheral blood is less sensitive.'}); }
+      if(s.flt3==='tkd'){ flags.push({c:'amber',i:'ⓘ',t:'<b>FLT3-TKD has no MRD-grade assay.</b> In-house PCR is diagnostic only — track disease by another marker / NeoComp.'}); }
+      // CBF
+      if(s.cbf==='inv16') add(mrd,'cbfb');
+      if(s.cbf==='t821'){ add(mrd,'runx1'); flags.push({c:'amber',i:'✈',t:'<b>t(8;21):</b> RUNX1::RUNX1T1 is a send-out to ARUP (in-house validated, NYS approval pending).'}); }
+      // NeoComp triggers
+      let neoWhy=null;
+      if(firstcr) neoWhy='Required on the first-CR marrow.';
+      else if(d30 && s.othermut==='yes') neoWhy='Required at Day +30 — a mutation was present at diagnosis.';
+      else if(s.othermut==='yes' && !hasHighSensMarker(s)) neoWhy='No other high-sensitivity marker — track the diagnostic mutation (e.g. ASXL1/KMT2A/TP53).';
+      else if(s.othermut==='yes') neoWhy='Consider — diagnostic mutation present (clonal-evolution / relapse concern).';
+      if(neoWhy) add(additional,'neocomp',neoWhy);
+      if(s.fusion==='yes') add(additional,'rna');
+      if(mrd.length===0 && s.othermut!=='yes')
+        flags.push({c:'amber',i:'ⓘ',t:'<b>No dedicated high-sensitivity MRD marker for this patient.</b> Rely on flow-MRD + chimerism; consider NeoComp if any diagnostic mutation exists.'});
+    }
+
+    if(s.disease==='all'){
+      if(s.clone==='yes') add(mrd,'cseq_mrd');
+      else { add(mrd,'cseq_id','No clone on file — establish the trackable clone first.'); flags.push({c:'red',i:'!',t:'<b>No ClonoSEQ clone established.</b> Send ClonoSEQ ID to capture the clone before MRD tracking.'}); }
+      if(s.ph && s.ph!=='no') add(mrd,'bcrabl','Ph+ — quantitative BCR-ABL on the IS.');
+      // NeoComp
+      let neoWhy=null;
+      if(firstcr) neoWhy='NeoComp on the first-CR marrow.';
+      else if(d30) neoWhy='Required at Day +30.';
+      else if(s.clone==='no') neoWhy='No trackable ClonoSEQ clone — reasonable to send with each marrow if mutations were present.';
+      if(neoWhy) add(additional,'neocomp',neoWhy);
+      if(s.all_fusion==='yes') add(additional,'rna','Fusion positive at diagnosis.');
+    }
+
+    if(s.disease==='cml'){
+      add(mrd,'bcrabl','BCR-ABL PCR — the CML MRD marker, on the IS.');
+    }
+
+    if(s.disease==='mpn'){
+      if(s.driver==='jak2') add(mrd,'jak2','JAK2 V617F ddPCR (in-house).');
+      else if(s.driver==='calr'||s.driver==='mpl') add(mrd,'calrmpl', (s.driver==='calr'?'CALR':'MPL')+' — patient-specific driver by NeoGenomics.');
+      else { add(additional,'neocomp','Triple-negative — full NGS to find a trackable marker.'); }
+      if(s.driver && s.driver!=='jak2' && s.driver!=='tn') add(additional,'neocomp','For other mutations, as indicated.');
+    }
+  }
+
+  /* ---------- Chimerism (post-HCT only) ---------- */
+  let chim=[];
+  if(posthct){
+    add(chim,'chim_w'); add(chim,'chim_l');
+    if(s.disease==='all' && s.lineage==='b'){
+      chim[0].wy='B-ALL — send BOTH sorted and unsorted.';
+      flags.push({c:'amber',i:'⧉',t:'<b>B-ALL chimerism:</b> send whole (unsorted) AND CD3/CD33 sorted. Whole chimerism can fall while lineage fractions still read 100% donor — an early relapse signal.'});
+    }
+    flags.push({c:'blue',i:'≋',t:'<b>Chimerism is itself a trigger.</b> Falling / mixed donor chimerism — read it alongside MRD (see the action pathway).'});
+  }
+
+  /* ---------- In-house 2-EDTA reminder ---------- */
+  const usesInhouseMol = [...mrd,...additional].some(t=>t.badge==='inh' && (t.tube||'').includes('EDTA'));
+  if(usesInhouseMol)
+    flags.push({c:'green',i:'⊞',t:'<b>Submit 2 EDTA tubes for in-house molecular</b> — regardless of how many in-house assays are ordered.'});
+
+  /* ---------- Build the ordered draw ---------- */
+  let order=[];
+  if(high){
+    // High burden: order doesn't affect detection → fresh-cell tests first, then molecular
+    order.push(tag(T2('flow'),'Flow · fresh cells'));
+    order.push(tag(T2('cyto'),'Cytogenetics / FISH'));
+    mrd.forEach(t=>order.push(tag(t,'Molecular · baseline marker')));
+    additional.forEach(t=>order.push(tag(t,'Molecular')));
+  } else {
+    // Low burden: first pull is precious
+    mrd.forEach(t=>order.push(tag(t,'MRD — give it the first pull')));
+    order.push(tag(T2('flow'),'Flow'));
+    order.push(tag(T2('cyto'),'Cytogenetics / FISH'));
+    additional.forEach(t=>order.push(tag(t,'Additional NGS / RNA')));
+    chim.forEach(t=>order.push(tag(t,'Chimerism (PB + BM)')));
+  }
+  // Research biobank pull — drawn last, if eligible (contact Joshua Fein / Edgar Rey)
+  if(s.biobank==='yes' || s.biobank==='unsure'){
+    order.push(tag(Object.assign({key:'biobank'},T.biobank),'Research — draw last (if eligible)'));
+    if(s.biobank==='unsure')
+      flags.push({c:'blue',i:'⌕',t:'<b>Biobank eligibility unconfirmed.</b> Check the patient is eligible before drawing — questions to <b>Joshua Fein</b> or <b>Edgar Rey</b>.'});
+    else
+      flags.push({c:'green',i:'✚',t:'<b>Biobank sample — eligible.</b> 5 mL into a 0.5 mL heparin syringe, drawn last. Questions → Joshua Fein / Edgar Rey.'});
+  }
+  // morphology is implicit on every marrow — prepend as note card
+  order.unshift(tag(Object.assign({key:'morph'},T.morph),'Every marrow'));
+
+  return {high,order,flags,interp:[...interp],posthct};
+
+  function T2(k){return Object.assign({key:k},T[k]);}
+  function tag(t,bucket){t.bucket=bucket;return t;}
+}
+function hasHighSensMarker(s){
+  return (s.npm1==='typea'||s.npm1==='nona'||s.flt3==='itd'||s.flt3==='both'||s.cbf==='inv16'||s.cbf==='t821');
+}
+
+/* ============================================================
+   STATE + ROUTING
+   ============================================================ */
+let state={};       // answers
+let step=0;         // index into queue
+let tab='decide';
+
+const scroll=document.getElementById('scroll');
+const backBtn=document.getElementById('backBtn');
+const restartBtn=document.getElementById('restartBtn');
+const navTitle=document.getElementById('navTitle');
+const crumbsEl=document.getElementById('crumbs');
+const navSpacer=document.getElementById('navSpacer');
+
+function restart(){ state={}; step=0; render(); }
+
+function goBack(){
+  if(step<=0) return;
+  const q=buildQueue(state);
+  step--;
+  const keep=new Set(q.slice(0,step));          // keep only answers before the question we return to
+  Object.keys(state).forEach(k=>{ if(!keep.has(k)) delete state[k]; });
+  render();
+}
+
+function answer(id,v){
+  state[id]=v;
+  const q=buildQueue(state);
+  const idx=q.indexOf(id);
+  const keep=new Set(q.slice(0,idx+1));          // drop any downstream / orphaned answers
+  Object.keys(state).forEach(k=>{ if(!keep.has(k)) delete state[k]; });
+  step=idx+1;
+  render();
+}
+
+function setTab(t){ tab=t; document.getElementById('tabDecide').classList.toggle('on',t==='decide');
+  document.getElementById('tabRef').classList.toggle('on',t==='ref'); render(); }
+
+/* ---------- RENDER ---------- */
+function render(){
+  if(tab==='ref'){ renderRef(); return; }
+  const queue=buildQueue(state);
+  const complete = queue.every(id=>state[id]!==undefined);
+  navSpacer.hidden = !( (step===0) );
+  restartBtn.hidden = (step===0);
+  backBtn.hidden = (step===0);
+
+  if(step===0 && !state.disease){ renderStart(); return; }
+  if(complete && step>=queue.length){ renderPlan(); return; }
+  renderQuestion(queue[step], queue);
+}
+
+function renderStart(){
+  navTitle.textContent='MRD Navigator';
+  crumbsEl.hidden=true; backBtn.hidden=true; restartBtn.hidden=true; navSpacer.hidden=false;
+  scroll.innerHTML=`
+    <div class="fade">
+      <div class="startcard">
+        <h1>MRD Navigator</h1>
+        <p>Patient at the bedside? Answer one question at a time — get the exact tests, order of draw, and how to read the result.</p>
+      </div>
+      <div class="q" style="font-size:22px">Let’s start.</div>
+      <div class="qsub">Which disease are we sampling?</div>
+      <div class="opts">${DIS_opts()}</div>
+      <div class="disclaimer">Encodes <b>WCM BMT MRD SOP v3 (7.22.26)</b> for AML/MDS, ALL, CML, MF/MPN. Decision support only — confirm every plan with the attending before the draw.</div>
+    </div>`;
+}
+function DIS_opts(){
+  return Object.entries(DIS).map(([v,d])=>optHTML({v,l:d.label,s:d.sub,ic:d.ic,c:d.color},'disease')).join('');
+}
+
+function renderQuestion(id,queue){
+  const def=questionDef(id,state);
+  navTitle.textContent = state.disease ? DIS[state.disease].label : 'MRD Navigator';
+  renderCrumbs();
+  const total=queue.length-1; // exclude nothing; show progress across queue
+  const dots=queue.map((qid,i)=>{
+    let cls = i<step?'done':(i===step?'on':'');
+    return `<i class="${cls}"></i>`;
+  }).join('');
+  scroll.innerHTML=`
+    <div class="fade">
+      <div class="prog">${dots}</div>
+      <div class="q">${def.q}</div>
+      ${def.sub?`<div class="qsub">${def.sub}</div>`:'<div style="height:6px"></div>'}
+      <div class="opts">${def.opts.map(o=>optHTML(o,id)).join('')}</div>
+    </div>`;
+}
+function optHTML(o,id){
+  const sel = state[id]===o.v ? ' sel':'';
+  return `<button class="opt${sel}" onclick="answer('${id}','${o.v}')">
+    <span class="ic" style="background:${o.c||'#8A8492'}">${o.ic||''}</span>
+    <span class="tx"><span class="l">${o.l}</span>${o.s?`<span class="s">${o.s}</span>`:''}</span>
+    <span class="chev"><svg viewBox="0 0 9 16" fill="none"><path d="M1 1l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  </button>`;
+}
+
+function renderCrumbs(){
+  const parts=[];
+  if(state.disease) parts.push(`<span class="crumb"><b>${DIS[state.disease].label}</b></span>`);
+  if(state.setting) parts.push(`<span class="crumb">${SETTING[state.setting].label}</span>`);
+  if(state.fu_stage) parts.push(`<span class="crumb">${({firstcr:'First CR',prehct:'Pre-HCT',other:'Response'})[state.fu_stage]}</span>`);
+  if(state.ph_day) parts.push(`<span class="crumb">${({d30:'Day +30',d100:'+100',d180:'+180',d360:'+360',interim:'Interim PB'})[state.ph_day]}</span>`);
+  if(parts.length){ crumbsEl.hidden=false; crumbsEl.innerHTML=parts.join(''); }
+  else crumbsEl.hidden=true;
+}
+
+/* ---------- PLAN ---------- */
+function splitFlag(t){
+  const m=t.match(/^\s*<b>([\s\S]*?)<\/b>\s*([\s\S]*)$/);
+  if(m) return {head:m[1].trim().replace(/[.:—\-\s]+$/,''), detail:m[2].trim()};
+  return {head:t.trim(), detail:''};
+}
+function renderPlan(){
+  const p=assemblePlan(state);
+  navTitle.textContent='The Plan';
+  renderCrumbs();
+  backBtn.hidden=false; restartBtn.hidden=false; navSpacer.hidden=true;
+
+  const flagsHTML = p.flags.map(f=>{
+    const s=splitFlag(f.t);
+    if(s.detail) return `<details class="frow ${f.c||''}"><summary><span class="fic">${f.i}</span><span class="fhead">${s.head}</span><span class="fchev">›</span></summary><div class="fdetail">${s.detail}</div></details>`;
+    return `<div class="frow ${f.c||''} solo"><span class="fic">${f.i}</span><span class="fhead">${s.head}</span></div>`;
+  }).join('');
+  let lastB=null, testsHTML='';
+  p.order.forEach((t,i)=>{
+    if(t.bucket!==lastB){ testsHTML+=`<div class="grouplabel">${t.bucket}</div>`; lastB=t.bucket; }
+    testsHTML+=tcardHTML(t,i);
+  });
+
+  let interpHTML='';
+  if(p.interp.includes('npm1')) interpHTML+=npm1InterpHTML();
+  if(p.interp.includes('flt3')) interpHTML+=flt3InterpHTML();
+
+  const settingLine = SETTING[state.setting].label +
+     (state.fu_stage?` · ${({firstcr:'First CR',prehct:'Pre-HCT',other:'Response'})[state.fu_stage]}`:'') +
+     (state.ph_day?` · ${({d30:'Day +30',d100:'Day +100',d180:'Day +180',d360:'Day +360',interim:'Interim (PB)'})[state.ph_day]}`:'');
+  const markerLine = markerSummary();
+
+  scroll.innerHTML=`
+    <div class="fade">
+      <div class="planhead">
+        <div class="big">${DIS[state.disease].label}</div>
+        <div class="sub">${settingLine}${markerLine?` · ${markerLine}`:''}</div>
+      </div>
+
+      <div class="sectlabel">⚑ Must-do at the bedside<span class="hint">tap for detail</span></div>
+      <div class="mustdo">${flagsHTML}</div>
+
+      <div class="sectlabel"><span class="n">SEND</span> Tests · in order of draw<span class="hint">tap a row</span></div>
+      ${testsHTML}
+
+      ${ p.posthct||!p.high ? `
+      <details class="acc"><summary><span class="aic">📈</span> How to read the result ${p.interp.length?'':'· response categories'}<span class="arw">›</span></summary>
+        <div class="body">${interpHTML}${responseCatHTML()}</div>
+      </details>
+      <details class="acc"><summary><span class="aic">⇄</span> Action pathway<span class="arw">›</span></summary>
+        <div class="body">${actionHTML()}</div>
+      </details>`:''}
+
+      <div class="disclaimer">Assembled from <b>WCM BMT MRD SOP v3 (7.22.26)</b>. Always assess the longitudinal <b>trend</b>, not a single value. Confirm with the attending before the draw.</div>
+      <div style="height:6px"></div>
+      <button class="opt" style="justify-content:center;padding:16px" onclick="restart()"><span class="l" style="color:var(--accent);white-space:nowrap;font-weight:700">↺&nbsp;&nbsp;Start a new patient</span></button>
+    </div>`;
+  scroll.scrollTop=0;
+}
+
+function tcardHTML(t,i){
+  const badgeTxt={inh:'In-house',out:'Send-out',arup:'ARUP',soon:'Coming',res:'Research'}[t.badge]||'';
+  const srcTxt={bm:'Marrow',pb:'PB',both:'PB + BM'}[t.src]||'';
+  const isNote = t.key==='morph';
+  const badge = badgeTxt?`<span class="badge ${t.badge}">${badgeTxt}</span>`:'';
+  const meta = isNote?'':`
+    <div class="meta">
+      <span class="k">Source</span><span class="v"><span class="src ${t.src}">${srcTxt}</span></span>
+      ${t.emr?`<span class="k">EMR order</span><span class="v mono">${t.emr}</span>`:''}
+      ${t.tube&&t.tube!=='—'?`<span class="k">Tube</span><span class="v">${t.tube}${t.vol?` · ${t.vol}`:''}</span>`:''}
+      ${t.sens?`<span class="k">Sensitivity</span><span class="v">${t.sens}</span>`:''}
+    </div>`;
+  return `<details class="trow">
+    <summary>
+      <span class="tnum${isNote?' note':''}">${isNote?'✓':i}</span>
+      <span class="tnm">${t.nm}</span>
+      ${badge}
+      <span class="tchev">›</span>
+    </summary>
+    <div class="tbody"><div class="twhy">${t.wy}</div>${meta}</div>
+  </details>`;
+}
+
+function markerSummary(){
+  const m=[];
+  if(state.npm1&&state.npm1!=='none') m.push('NPM1 '+({typea:'Type A',nona:'non-A'})[state.npm1]);
+  if(state.flt3&&state.flt3!=='none') m.push('FLT3-'+({itd:'ITD',tkd:'TKD',both:'ITD+TKD'})[state.flt3]);
+  if(state.cbf&&state.cbf!=='none') m.push(({inv16:'inv(16)',t821:'t(8;21)'})[state.cbf]);
+  if(state.ph&&state.ph!=='no') m.push('Ph+');
+  if(state.driver) m.push(({jak2:'JAK2',calr:'CALR',mpl:'MPL',tn:'triple-neg'})[state.driver]);
+  if(state.lineage) m.push(state.lineage.toUpperCase()+'-ALL');
+  return m.join(' · ');
+}
+
+/* ---------- interpretation blocks ---------- */
+function npm1InterpHTML(){
+  return `<div class="srcband">🩸 NPM1 by qPCR (cDNA) — ELN 2025</div>
+  <div style="font-size:12px;color:var(--grey);margin-bottom:4px">Thresholds differ by sample source. Quantitative & trend-based.</div>
+  <div style="font-size:12px;font-weight:800;margin-top:8px">Peripheral blood (PB)</div>
+  <table class="itbl"><tr><th>mutNPM1/ABL1</th><th>Response</th></tr>
+    <tr><td>&lt;0.001% or undetectable</td><td><span class="pill g">Optimal</span></td></tr>
+    <tr><td>≥0.001% – &lt;0.01% &amp; detectable</td><td><span class="pill a">Warning</span></td></tr>
+    <tr><td>≥0.01% &amp; detectable</td><td><span class="pill r">MRD relapse</span></td></tr></table>
+  <div style="font-size:12px;font-weight:800;margin-top:10px">Bone marrow (BM)</div>
+  <table class="itbl"><tr><th>mutNPM1/ABL1</th><th>Response</th></tr>
+    <tr><td>&lt;0.001% or undetectable</td><td><span class="pill g">Optimal</span></td></tr>
+    <tr><td>≥0.001% – &lt;0.1% &amp; detectable</td><td><span class="pill a">Warning</span></td></tr>
+    <tr><td>≥0.1% &amp; detectable</td><td><span class="pill r">MRD relapse</span></td></tr></table>
+  <div class="fn"><b>Undetectable:</b> CT≥40 in ≥2/3 replicates &amp; ≥10,000 ABL1 copies (optimally ≥30,000). <b>Never MRD-neg?</b> ≥1 log₁₀ rise from nadir (same tissue) counts regardless of threshold. <b>MRD relapse</b> → confirm ≤4 weeks with a 2nd consecutive sample (ideally PB + BM) unless BM copies ≥1%.</div>`;
+}
+function flt3InterpHTML(){
+  return `<div class="srcband">🧬 FLT3-ITD by UHS-NGS — ELN 2025</div>
+  <div style="font-size:12px;color:var(--grey);margin-bottom:4px">Binary. Marrow required. LOD validated to 10⁻⁴–10⁻⁵ VAF.</div>
+  <table class="itbl"><tr><th>Result</th><th>Response</th></tr>
+    <tr><td>&lt; LOD</td><td><span class="pill g">Optimal</span></td></tr>
+    <tr><td>≥ LOD</td><td><span class="pill r">MRD relapse</span></td></tr></table>
+  <div class="fn"><b>≥LOD</b> is associated with imminent relapse and may not need a repeat — but low-level ≥LOD yet &lt;0.01% VAF should be confirmed, especially if the ITD clone differs from diagnosis.</div>`;
+}
+function responseCatHTML(){
+  return `<div class="srcband" style="margin-top:14px">◪ Response categories</div>
+  <table class="itbl"><tr><th>Category</th><th>Definition</th></tr>
+    <tr><td><span class="pill g">Optimal</span></td><td>MRD negative / below threshold</td></tr>
+    <tr><td><span class="pill a">Warning</span></td><td>Low-level positive, below relapse threshold</td></tr>
+    <tr><td><span class="pill r">MRD relapse</span></td><td>At / above relapse threshold (confirm ≤4 wk)</td></tr></table>`;
+}
+function actionHTML(){
+  const rows=[
+    ['#2E7D5B','Optimal','Continue routine monitoring.'],
+    ['#C17E2E','Warning','Repeat MRD in ~4 weeks. Review trend + chimerism. Consider IS taper and pre-emptive therapy.'],
+    ['#B23A48','MRD relapse','Confirm (≤4 wk), then initiate therapy — DLI, targeted therapy, HMA-based therapy, clinical trial, or maintenance / pre-emptive strategy.']
+  ];
+  return rows.map(r=>`<div class="act"><span class="dot" style="background:${r[0]}"></span><span class="atx"><span class="an">${r[1]}</span><span class="ad">${r[2]}</span></span></div>`).join('')
+   + `<div class="fn" style="margin-top:10px">Pre-emptive / maintenance therapy may begin on clinical judgment — integrating MRD trend, chimerism, time from transplant, and disease genetics. Falling / mixed donor chimerism can itself trigger this pathway.</div>`;
+}
+
+/* ============================================================
+   REFERENCE TAB
+   ============================================================ */
+function renderRef(){
+  navTitle.textContent='Reference';
+  crumbsEl.hidden=true; backBtn.hidden=true; restartBtn.hidden=true; navSpacer.hidden=false;
+  const inhouse=[
+    ['NPM1 Type A','RT-PCR','0.01% NCN (Type A only)'],
+    ['CBFB::MYH11','RT-PCR','0.004% NCN — inv(16)'],
+    ['BCR-ABL1 e13a2/e14a2','RT-PCR','0.001–0.0001% IS'],
+    ['BCR-ABL1 e1a2 (p190)','RT-PCR','0.006% NCN'],
+    ['JAK2 V617F','ddPCR','0.1% fractional abundance'],
+    ['IDH1 / IDH2','ddPCR','0.1% fractional abundance'],
+    ['FLT3 ITD / TKD','PCR','1% / 3% VAF — diagnostic-grade'],
+    ['PML-RARA','PCR','1/10³–1/10⁴ (qualitative)'],
+    ['Heme Fusion (Archer)','NGS','~0.5% fusion reads'],
+    ['TSO500','NGS','3% VAF']
+  ];
+  const sendout=[
+    ['ClonoSEQ (Adaptive)','Lymphoid MRD','~10⁻⁶ · baseline clone required'],
+    ['FLT3-ITD UHS-NGS (Invivoscribe)','FLT3-ITD MRD','10⁻⁴–10⁻⁵ · marrow · ITD only'],
+    ['NPM1 UHS-NGS (Invivoscribe)','NPM1 MRD','covers non–Type-A; with in-house pre-HCT & D+30'],
+    ['NeoComp (NeoGenomics)','Broad myeloid mutations','ASXL1/KMT2A/TP53… · alt = TSO500'],
+    ['RUNX1::RUNX1T1 RT-PCR (ARUP)','t(8;21) MRD','send-out for now — in-house pending NYS']
+  ];
+  const soon=['Archer VariantPlex','RUNX1::RUNX1T1 RT-PCR','NPM1 ddPCR (all mutations, on hold)','PML-RARA quantitative','KMT2Ar RT-PCR','CALR type 1/2 ddPCR','BRAF V600E ddPCR','KIT D816V ddPCR','FLT3 & NPM1 NGS MRD (alpha)','WGS Heme (feasibility)'];
+
+  scroll.innerHTML=`
+    <div class="fade">
+      <div class="refh">Cornell test menu</div>
+      <div class="refp">What is validated in-house at WCM vs sent out. Source: WCM Molecular Pathology menu.</div>
+
+      <div style="font-size:12.5px;font-weight:800;color:#2E7D5B;margin:6px 2px 6px">● In-house</div>
+      <table class="rtable"><tr><th>Assay</th><th>Method</th><th>Sensitivity</th></tr>
+        ${inhouse.map(r=>`<tr><td class="tn">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}
+      </table>
+
+      <div style="font-size:12.5px;font-weight:800;color:#C17E2E;margin:14px 2px 6px">● Send-out</div>
+      <table class="rtable"><tr><th>Test</th><th>Use</th><th>Notes</th></tr>
+        ${sendout.map(r=>`<tr><td class="tn">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}
+      </table>
+
+      <div style="font-size:12.5px;font-weight:800;color:#5A4E9E;margin:14px 2px 6px">● Coming in-house / in development</div>
+      <table class="rtable"><tr><th colspan="2">${soon.map(x=>x).join(' · ')}</th></tr></table>
+
+      <div class="refh">Interpretation — ELN 2025</div>
+      <div class="refp">NPM1 qPCR and FLT3-ITD read-outs.</div>
+      <div style="background:var(--card);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);margin-bottom:10px">${npm1InterpHTML()}</div>
+      <div style="background:var(--card);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);margin-bottom:10px">${flt3InterpHTML()}</div>
+      <div style="background:var(--card);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);margin-bottom:10px">${responseCatHTML()}${actionHTML()}</div>
+
+      <div class="refh">Order of draw</div>
+      <div style="background:var(--card);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);margin-bottom:10px;font-size:13.5px;line-height:1.5">
+        <b style="color:var(--red)">High burden</b> (new dx / relapse): order doesn’t affect detection → <b>flow → cytogenetics/FISH → molecular</b>.<br><br>
+        <b style="color:var(--blue)">Low burden</b> (MRD / post-HCT): <b>first pull is precious</b> → 1) disease-specific MRD, 2) flow, 3) cytogenetics/FISH, 4) additional NGS/RNA, 5) research.<br><br>
+        <b style="color:#1E7A82">Biobank (if eligible)</b>: 5 mL in a 0.5 mL heparin syringe, drawn last — offered on every marrow. Questions → Joshua Fein or Edgar Rey.
+      </div>
+      <div class="disclaimer">Reference encodes WCM BMT MRD SOP v3 (7.22.26), anchored to the Cloos et al. 2025 ELN-DAVID MRD consensus (Blood 2026;147(11):1147–1167).</div>
+    </div>`;
+  scroll.scrollTop=0;
+}
+
+/* clock */
+(function(){try{const d=new Date();let h=d.getHours(),m=d.getMinutes();const el=document.getElementById('clock');if(el)el.textContent=`${h}:${String(m).padStart(2,'0')}`;}catch(e){}})();
+
+render();
+</script>
+</body>
+</html>
